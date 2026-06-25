@@ -1,4 +1,4 @@
-﻿# Face Attendance System
+# Face Attendance System
 
 Real-time face attendance system built with FastAPI, InsightFace ArcFace embeddings,
 MediaPipe-based stream liveness, SQLite, and a vanilla JavaScript dashboard. The
@@ -115,6 +115,7 @@ IOT-project/
 |-- main.py                  FastAPI entrypoint (lifespan preload model + camera)
 |-- config.py                Centralized configuration
 |-- requirements.txt
+|-- requirements-pi.txt      Pinned, ARM64-verified deps used by the Docker image
 |-- pytest.ini
 |-- README.md
 |-- .env.example
@@ -182,6 +183,7 @@ Which paths are tracked in Git and which are local-only runtime data.
 |---|---|---|
 | `app/`, `core/`, `web/`, `tests/`, `scripts/`, `docs/` | Yes | Application source and docs |
 | `main.py`, `config.py`, `requirements.txt`, `pytest.ini` | Yes | Entry point and config |
+| `requirements-pi.txt` | Yes | Pinned dependency set verified to have ARM64 wheels (used by Docker) |
 | `Dockerfile`, `docker-compose.yml`, `.dockerignore`, `docker/` | Yes | Container build and deploy |
 | `.env.example` | Yes | Environment variable reference with no secrets |
 | `.gitignore`, `.gitattributes` | Yes | Repo tooling |
@@ -278,6 +280,14 @@ docker run -d --name face-attendance \
 docker buildx build --platform linux/arm64 -t face-attendance --load .
 ```
 
+### Pinned dependencies
+
+The Docker image installs from `requirements-pi.txt`, a pinned set verified to have
+ARM64 (aarch64) wheels for Python 3.11, so nothing compiles from C++ source on the Pi.
+A key constraint: `mediapipe 0.10.18` needs `numpy<2` while newer OpenCV needs
+`numpy>=2`, so the file pins `numpy==1.26.4` with `opencv-python==4.10.0.84`. Do not
+loosen these to `>=`; a newer mediapipe/onnxruntime may lack an ARM wheel and break the
+Pi build. The local (non-Docker) install still uses `requirements.txt`.
 ### Notes
 
 - Camera: the compose file maps `/dev/video0`. Change it if the USB webcam is on

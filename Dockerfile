@@ -22,8 +22,11 @@ ENV PYTHONUNBUFFERED=1 \
 WORKDIR /app
 
 # Cai dependency truoc (tan dung cache layer khi code doi ma deps khong doi).
-COPY requirements.txt ./
-RUN pip install --upgrade pip && pip install -r requirements.txt
+# Dung requirements-pi.txt: phien ban DA GHIM, da verify co wheel aarch64
+# (khong build C++ tren Pi). --prefer-binary tranh roi vao build tu source.
+COPY requirements-pi.txt ./
+RUN pip install --upgrade pip \
+    && pip install --prefer-binary -r requirements-pi.txt
 
 # Copy toan bo source (model/db/logs bi .dockerignore loai ra).
 COPY . .

@@ -1,0 +1,23 @@
+# Dependency da GHIM cho Raspberry Pi 4 (ARM64 / aarch64, Python 3.11).
+# Da verify: tat ca deu co wheel aarch64 (hoac pure-Python sdist cho filterpy),
+# KHONG can build C++ tren Pi. Cay phu thuoc resolve sach (pip download --platform
+# manylinux2014_aarch64 --python-version 3.11).
+#
+# Luu y rang buoc quan trong: mediapipe 0.10.18 yeu cau numpy<2, con opencv ban
+# moi yeu cau numpy>=2 -> phai ghim numpy 1.26.4 + opencv 4.10.0.84 cho khop.
+# KHONG doi "==" thanh ">=" o file nay; ban moi cua mediapipe/onnxruntime co the
+# chua co wheel ARM va se khien Docker build tren Pi that bai.
+
+opencv-python==4.10.0.84
+numpy==1.26.4
+onnxruntime==1.16.3
+insightface==1.0.1
+mediapipe==0.10.18
+fastapi==0.138.0
+uvicorn[standard]==0.49.0
+python-multipart==0.0.32
+loguru==0.7.3
+scikit-learn==1.5.2
+scipy==1.15.3
+jinja2==3.1.6
+filterpy==1.4.5
