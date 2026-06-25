@@ -1,0 +1,80 @@
+﻿# ── Models (downloaded, too large for Git) ──────────────────
+models/*
+!models/.gitkeep
+
+# ── Database (local runtime data — do not commit) ───────────
+database/*.db
+database/*.db-shm
+database/*.db-wal
+database/*.db-journal
+database/*.sqlite
+database/*.sqlite3
+database/backups/
+!database/.gitkeep
+
+# ── Logs & runtime artifacts (evidence/face crops = PII) ────
+logs/
+*.log
+
+# ── Environment / secrets ───────────────────────────────────
+# .env.example is intentionally committed; real env files are not.
+.env
+.env.*
+!.env.example
+
+# ── Certificates & private keys ─────────────────────────────
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+id_rsa
+id_rsa.*
+id_ed25519
+id_ed25519.*
+
+# ── Python ──────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+build/
+dist/
+*.egg
+
+# ── Virtual environments ────────────────────────────────────
+.venv/
+venv/
+.conda*/
+env/
+
+# ── Pytest & coverage ───────────────────────────────────────
+.pytest_cache/
+pytest-cache-files-*/
+.coverage
+coverage.xml
+htmlcov/
+tests/test_result.txt
+
+# ── Tunnel / dev convenience ────────────────────────────────
+tunnel_log*.txt
+*.bat.log
+
+# ── Web demo video (large — share via Drive) ────────────────
+web/demo.mp4
+
+# ── OS / IDE ────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# ── Temp ────────────────────────────────────────────────────
+tmp/
+temp/
+
