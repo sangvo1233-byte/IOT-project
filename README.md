@@ -1,8 +1,10 @@
-# Face Attendance System
+﻿# Face Attendance System
 
-Real-time face attendance system built with FastAPI, InsightFace ArcFace embeddings, MediaPipe-based stream liveness, SQLite, and a vanilla JavaScript dashboard.
+Real-time face attendance system built with FastAPI, InsightFace ArcFace embeddings,
+MediaPipe-based stream liveness, SQLite, and a vanilla JavaScript dashboard. The
+deployment target is a Raspberry Pi 4 (ARM64), packaged with Docker.
 
-The current default web runtime is Detect V4.4. It supports:
+The default web runtime is Detect V4.4. It supports:
 
 - `Auto` scan mode selection on the dashboard
 - `Browser Stream` scanning over `ws://.../ws/scan-v4`
@@ -10,7 +12,24 @@ The current default web runtime is Detect V4.4. It supports:
 - multi-angle enrollment with `front`, `left`, and `right` capture
 - layered anti-spoofing with moire detection, screen-context checks, phone-rectangle checks, passive liveness, stream liveness, and active challenge fallback
 
-Detect V3 and legacy V1 routes are still present for compatibility and comparison, but the current UI is wired around V4.4.
+Detect V3 and legacy V1 routes are still present for compatibility, but the current UI is wired around V4.4.
+
+---
+
+## Quick Start (Docker on Raspberry Pi 4)
+
+This is the recommended path for a teammate deploying on the Pi.
+
+```bash
+git clone https://github.com/sangvo1233-byte/IOT-project.git
+cd IOT-project
+docker compose up -d --build
+docker compose logs -f
+```
+
+Open `http://<pi-ip>:8000/`. First start is slower because the container downloads
+the model set (~600 MB) into the mounted `models/` volume. See the full
+[Docker Deployment](#docker-deployment-raspberry-pi-4--arm64) section for details.
 
 ---
 
@@ -21,7 +40,6 @@ Detect V3 and legacy V1 routes are still present for compatibility and compariso
 | Detect V4.4 | `/ws/scan-v4`, `/api/scan/v4`, `/ws/scan-v4/local` | Current production scan pipeline | Default |
 | Detect V3 | `/ws/scan-v3`, `/api/scan/v3`, `/api/scan/v3/challenge` | Older strict + challenge path | Compatibility |
 | Legacy V1 | `/api/scan`, `/api/enroll` | Baseline single-frame flow | Legacy |
-| `dev/` scripts | `dev/detect-v*.py`, `dev/enroll-v*.py` | Research and iteration history | Experimental |
 
 The dashboard scan-mode selector uses three frontend modes:
 
@@ -37,7 +55,7 @@ The `/phone` page and `/ws/phone-camera` transport are still available, but they
 
 - FastAPI backend with static dashboard served from `web/`
 - SQLite student/session/attendance storage
-- InsightFace face detection and 512-d ArcFace embeddings
+- InsightFace face detection and 512-d ArcFace embeddings (`buffalo_l`)
 - multi-angle V2 enrollment with per-angle validation
 - Detect V4.4 backend-owned scan runtime shared by browser stream and local-direct modes
 - active challenge fallback supporting `TURN_LEFT`, `TURN_RIGHT`, `LOOK_UP`, `LOOK_DOWN`, `OPEN_MOUTH`, and `CENTER_HOLD`
@@ -92,17 +110,23 @@ Current challenge state is in-memory and process-local.
 ## Project Structure
 
 ```text
-face-reg-finnal-project/
+IOT-project/
 |
-|-- main.py
-|-- config.py
+|-- main.py                  FastAPI entrypoint (lifespan preload model + camera)
+|-- config.py                Centralized configuration
 |-- requirements.txt
+|-- pytest.ini
 |-- README.md
-|-- REPORT_DETECT_V4_4_VI.md
-|-- REPORT_DETECT_V4_4_VI.pdf
-|-- start_tunnel.bat
+|-- .env.example
+|
+|-- Dockerfile               ARM64 image for Raspberry Pi 4
+|-- docker-compose.yml       One-command build/run with volumes + camera mapping
+|-- .dockerignore
+|-- docker/
+|   |-- entrypoint.sh         Downloads models on first run, then starts uvicorn
 |
 |-- app/
+|   |-- __init__.py
 |   |-- routes/
 |       |-- attendance.py
 |       |-- enrollment.py
@@ -116,108 +140,77 @@ face-reg-finnal-project/
 |       |-- __init__.py
 |
 |-- core/
-|   |-- anti_spoof.py
-|   |-- camera.py
-|   |-- challenge_v3.py
-|   |-- database.py
-|   |-- detect_v3.py
-|   |-- detect_v4.py
-|   |-- enrollment_v2.py
-|   |-- face_engine.py
-|   |-- liveness.py
-|   |-- local_runner.py
-|   |-- local_runner_v4.py
-|   |-- moire.py
-|   |-- runtime_v3.py
-|   |-- runtime_v4.py
-|   |-- schemas.py
-|   |-- stream_scan_v3.py
-|   |-- stream_scan_v4.py
+|   |-- face_engine.py        InsightFace detect + ArcFace embed + match
+|   |-- camera.py             Shared webcam producer thread
+|   |-- database.py           SQLite student/session/attendance
+|   |-- detect_v3.py  detect_v4.py
+|   |-- runtime_v3.py  runtime_v4.py
+|   |-- local_runner.py  local_runner_v4.py
+|   |-- stream_scan_v3.py  stream_scan_v4.py
+|   |-- anti_spoof.py  liveness.py  moire.py  challenge_v3.py
+|   |-- enrollment_v2.py  schemas.py  __init__.py
 |
 |-- web/
-|   |-- index.html
-|   |-- phone.html
-|   |-- style.css
-|   |-- phone.js
-|   |-- phone_style.css
+|   |-- index.html  phone.html
+|   |-- app.js  style.css  phone.js  phone_style.css
 |   |-- js/
-|       |-- api.js
-|       |-- enrollment.js
-|       |-- history.js
-|       |-- main.js
-|       |-- scan.js
-|       |-- session.js
-|       |-- state.js
-|       |-- students.js
-|       |-- ui.js
+|       |-- api.js  enrollment.js  history.js  main.js  scan.js
+|       |-- session.js  state.js  students.js  ui.js
 |
-|-- dev/
-|   |-- README.md
-|   |-- detect-v1.py
-|   |-- detect-v2.py
-|   |-- detect-v3.py
-|   |-- detect-v4.0.py
-|   |-- detect-v4.1.py
-|   |-- detect-v4.2.py
-|   |-- detect-v4.3.py
-|   |-- detect-v4.4.py
-|   |-- enroll-v1.py
-|   |-- enroll-v2.py
+|-- scripts/
+|   |-- download_models.py    Downloads buffalo_l + face_landmarker.task
 |
 |-- tests/
-|   |-- run_test.py
-|   |-- test_core.py
-|   |-- test_detect_v4.py
-|   |-- test_v2_v3.py
+|   |-- test_core.py          Integration (skips without a test video dir)
+|   |-- test_detect_v4.py  test_v2_v3.py  run_test.py
 |
-|-- models/
-|-- database/
-|-- logs/
+|-- docs/
+|   |-- 15-realignment-plan.md
+|
+|-- models/                  Downloaded models (gitignored, .gitkeep only)
+|-- database/                SQLite runtime data (gitignored, .gitkeep only)
+|-- logs/                    Evidence + face crops + logs (gitignored, created at runtime)
 ```
+
+---
 
 ## Repository Map
 
-The table below clarifies which paths are tracked in Git and which are local-only runtime data.
+Which paths are tracked in Git and which are local-only runtime data.
 
 | Path | Tracked in Git | Notes |
 |---|---|---|
-| `app/`, `core/`, `web/`, `tests/` | Yes | Application source code |
-| `main.py`, `config.py`, `requirements.txt` | Yes | Entry point and config |
-| `dev/` | Yes | Research scripts and iteration history |
+| `app/`, `core/`, `web/`, `tests/`, `scripts/`, `docs/` | Yes | Application source and docs |
+| `main.py`, `config.py`, `requirements.txt`, `pytest.ini` | Yes | Entry point and config |
+| `Dockerfile`, `docker-compose.yml`, `.dockerignore`, `docker/` | Yes | Container build and deploy |
 | `.env.example` | Yes | Environment variable reference with no secrets |
-| `pytest.ini`, `.gitignore`, `.gitattributes` | Yes | Repo tooling |
-| `start_tunnel.bat` | Yes | Development convenience script |
+| `.gitignore`, `.gitattributes` | Yes | Repo tooling |
 | `models/` | No | Downloaded model files; too large for Git |
 | `database/` | No | SQLite database and backups; local runtime data |
 | `logs/` | No | Evidence images, face crops, and runtime logs |
 | `.env` | No | Real environment variables; never commit |
-| `tunnel_log*.txt` | No | Cloudflared output |
 
-Git safety: `.gitignore` reduces the chance of accidentally committing local data, but it is not a security boundary. Sensitive values should be managed through environment variables or a secrets manager, not committed files.
+Git safety: `.gitignore` reduces the chance of accidentally committing local data, but
+it is not a security boundary. Sensitive values should be managed through environment
+variables, not committed files.
 
----
-
-Runtime data is stored in:
-
-- `database/attendance.db`
-- `database/backups/`
-- `logs/evidence/`
-- `logs/face_crops/`
+Runtime data is stored in `database/attendance.db`, `database/backups/`,
+`logs/evidence/`, and `logs/face_crops/`. None of it is committed.
 
 ---
 
 ## Requirements
 
-- Python 3.10 or newer
-- Conda or virtualenv recommended
+- Python 3.11 (recommended). MediaPipe does not yet provide wheels for Python 3.13, so 3.11 is the safe choice.
+- Conda or virtualenv recommended for a local (non-Docker) install
 - modern browser with camera permission
-- optional NVIDIA GPU for faster ONNX inference
+- optional NVIDIA GPU for faster ONNX inference (not present on the Pi; CPU is used there)
 
-Python 3.10+ is required because the codebase uses modern type syntax such as `str | None`.
+The codebase uses modern type syntax such as `str | None`, so Python 3.10+ is the floor.
 
 ---
 
-## Installation
+## Local Installation (without Docker)
 
 ### 1. Create an environment
 
@@ -232,17 +225,15 @@ conda activate face-att
 pip install -r requirements.txt
 ```
 
-### 3. Prepare models
-
-InsightFace uses `models/` as its model root. The project also expects:
-
-- `models/face_landmarker.task` for stream liveness
-
-Optional download:
+### 3. Download models
 
 ```bash
-curl.exe -L -o models/face_landmarker.task https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task
+python scripts/download_models.py
 ```
+
+This fetches the InsightFace `buffalo_l` set and `models/face_landmarker.task` into
+`models/`. InsightFace can also auto-download `buffalo_l` on first run; the script
+just prepares everything up front (and is what the Docker image runs on first start).
 
 If you want GPU inference, install a matching `onnxruntime-gpu` build instead of CPU-only `onnxruntime`.
 
@@ -298,25 +289,14 @@ docker buildx build --platform linux/arm64 -t face-attendance --load .
   port 8000 directly to the internet.
 
 ---
-## Running The App
 
-Start the FastAPI server:
+## Running The App (local)
 
 ```bash
 python main.py
 ```
 
-Open:
-
-```text
-http://localhost:8000/
-```
-
-Phone camera page:
-
-```text
-http://localhost:8000/phone
-```
+Open `http://localhost:8000/`. Phone camera page is at `http://localhost:8000/phone`.
 
 Useful health endpoints:
 
@@ -327,20 +307,6 @@ Useful health endpoints:
 - `GET /api/system/capabilities`
 
 Interactive API docs are available at `/docs` when `API_DOCS_ENABLED=true`.
-
-### Cloudflare tunnel
-
-```bash
-start_tunnel.bat
-```
-
-or:
-
-```bash
-cloudflared tunnel --url http://localhost:8000
-```
-
-This is useful when camera permissions require HTTPS on a remote device.
 
 ---
 
@@ -433,15 +399,10 @@ Configuration is split across two places:
 | `AUTO_LOAD_EMBEDDING_CACHE` | `True` | Load student embeddings during warmup |
 | `AUTO_START_CAMERA` | `True` | Start server webcam on boot |
 | `CAMERA_REQUIRED` | `False` | Mark camera failure as fatal when true |
-| `UVICORN_RELOAD` | `DEBUG` | Enable hot reload in development |
-| `API_DOCS_ENABLED` | `DEBUG` | Expose `/docs`, `/redoc`, and `/openapi.json` |
 | `CAMERA_SOURCE` | `0` | Server webcam source |
-| `DETECT_V3_STREAM_ENABLED` | `True` | Enable websocket streaming scan routes |
-| `DETECT_V3_STREAM_TARGET_FPS` | `10` | Browser frame send target |
-| `DETECT_V3_STREAM_DETECT_FPS` | `10` | Backend detect cadence |
-| `ENROLL_V2_BLUR_MIN` | `80.0` | Minimum blur quality for enrollment |
-| `ENROLL_V2_POSE_FRONT_MAX_DISP` | `0.12` | Max front nose displacement |
-| `ENROLL_V2_POSE_TURN_THRESHOLD` | `0.04` | Min turn displacement for left/right |
+| `INSIGHTFACE_MODEL` | `buffalo_l` | InsightFace model pack |
+| `EMBEDDING_DIM` | `512` | ArcFace embedding size |
+| `COSINE_THRESHOLD` | `0.45` | Base 1:N match threshold |
 
 ### Detect V4.4 thresholds in `core/detect_v4.py`
 
@@ -450,10 +411,7 @@ Configuration is split across two places:
 | `V4_COSINE_THRESHOLD` | `0.52` | V4 face-match threshold |
 | `MOIRE_SCREEN_THRESHOLD` | `0.60` | Suspicious moire threshold |
 | `MOIRE_BLOCK_THRESHOLD` | `0.45` | Hard screen block threshold |
-| `SCREEN_CONTEXT_WEIGHT` | `0.35` | Weight for context scoring |
 | `SCREEN_CONTEXT_STRONG_THRESHOLD` | `0.78` | Strong screen-context trigger |
-| `PHONE_RECT_CONTEXT_SCALE` | `2.80` | ROI expansion around face |
-| `PHONE_RECT_VERTICAL_RATIO` | `1.6` | Portrait-style ROI ratio |
 | `PHONE_RECT_SUSPICIOUS_THRESHOLD` | `0.38` | Suspicious phone-rectangle threshold |
 | `PHONE_RECT_STRONG_THRESHOLD` | `0.58` | Strong phone-rectangle threshold |
 
@@ -463,45 +421,24 @@ If you change V4 behavior, update both the code and this README so the documente
 
 ## Testing
 
-### Stable automated tests
-
-These tests do not require a camera or files outside the repository:
-
-```bash
-python -m pytest tests/test_detect_v4.py tests/test_v2_v3.py -q
-```
-
-### Full repository test command
+Run the automated suite (53 tests) with a Python 3.11 environment that has the deps installed:
 
 ```bash
 python -m pytest -q
 ```
 
-This command also discovers `tests/test_core.py`.
+`tests/test_detect_v4.py` and `tests/test_v2_v3.py` mock the heavy models, so they run
+without downloading anything.
 
-`tests/test_core.py` is an integration test that depends on:
-- an external video directory at `C:\Users\ADMIN\Desktop\Projects\face-attendance\test_video\`
-- a live database and `logs/` directory, which means it writes real runtime data
-
-Behavior of `tests/test_core.py`:
-- if the external video directory does not exist, the test skips itself
-- if the directory exists, the test runs and writes to local runtime data
-
-Run that integration test explicitly when you want to validate the end-to-end flow:
+`tests/test_core.py` is an integration test marked `@pytest.mark.integration`. It needs
+an external video directory and loads the real model. If that directory is not present
+it skips itself, which is why the default run still passes. To run it explicitly:
 
 ```bash
 python -m pytest tests/test_core.py -m integration -s
 ```
 
-### Legacy smoke runner
-
-Writes a result log to `tests/test_result.txt` (ignored by `.gitignore`):
-
-```bash
-python tests/run_test.py
-```
-
-### Optional frontend syntax check (requires Node.js)
+Optional frontend syntax check (requires Node.js):
 
 ```bash
 node --check web/js/main.js
@@ -517,7 +454,6 @@ node --check web/js/enrollment.js
 - test `Browser Stream` on a remote browser
 - test `Local Direct` on the machine that has the webcam attached
 - verify attendance success overlay and challenge overlay both render
-- toggle the `Tech Overlay` and confirm geometry/diagnostics appear
 - end the session and inspect history details
 
 ---
@@ -527,9 +463,9 @@ node --check web/js/enrollment.js
 - challenge state is in-memory and process-local, so multiple app workers would need shared state
 - thresholds still need real-camera tuning for lighting, compression, and replay conditions
 - `Local Direct` only makes sense when the camera is physically attached to the server machine
-- V3 and V4 coexist in the codebase, so route coverage is broader than the default UI path
+- the app has no authentication; do not expose it directly to the internet
+- ArcFace (`w600k_r50`, ~166 MB) runs on CPU on the Pi 4, so per-face latency is higher than on a PC; real FPS should be measured on the device
 - runtime data under `database/`, `logs/`, and `models/` can grow quickly during testing
 
-For implementation details behind Detect V4.4, see the research report in `dev/detect-v4.4.py` and the inline architecture comments in `core/detect_v4.py` and `core/runtime_v4.py`.
-
-The `dev/` directory and its scripts are intentional artifacts documenting the V1 to V4.4 research progression. They are tracked in Git and are not junk files.
+See `docs/15-realignment-plan.md` for the history of how this repo was realigned to the
+production codebase and the planned Raspberry Pi port.
