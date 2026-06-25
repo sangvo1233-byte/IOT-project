@@ -248,6 +248,56 @@ If you want GPU inference, install a matching `onnxruntime-gpu` build instead of
 
 ---
 
+## Docker Deployment (Raspberry Pi 4 / ARM64)
+
+The repository ships a `Dockerfile`, `.dockerignore`, and `docker-compose.yml` so a
+teammate can build and run the whole stack without installing Python, InsightFace,
+or MediaPipe by hand. Models are NOT in Git; the container downloads them on first
+start via `scripts/download_models.py` (needs internet) and caches them in the
+mounted `models/` volume.
+
+### Build and run on the Pi (recommended)
+
+```bash
+git clone https://github.com/sangvo1233-byte/IOT-project.git
+cd IOT-project
+docker compose up -d --build
+docker compose logs -f
+```
+
+The dashboard is then served on `http://<pi-ip>:8000`. The first start is slower
+because it downloads the `buffalo_l` model set (~600 MB) into `models/`.
+
+### Plain Docker (without compose)
+
+```bash
+docker build -t face-attendance .
+docker run -d --name face-attendance \
+  -p 8000:8000 \
+  --device /dev/video0:/dev/video0 \
+  -v "$(pwd)/models:/app/models" \
+  -v "$(pwd)/database:/app/database" \
+  -v "$(pwd)/logs:/app/logs" \
+  face-attendance
+```
+
+### Cross-building from an x86 PC for the Pi
+
+```bash
+docker buildx build --platform linux/arm64 -t face-attendance --load .
+```
+
+### Notes
+
+- Camera: the compose file maps `/dev/video0`. Change it if the USB webcam is on
+  another index. The Pi Camera Module (CSI) is not exposed through `/dev/video0`
+  by default and needs extra setup.
+- Persistence: `models/`, `database/`, and `logs/` are bind-mounted so models and
+  attendance data survive container rebuilds.
+- Security: the app has no authentication. Keep it on a trusted LAN, do not expose
+  port 8000 directly to the internet.
+
+---
 ## Running The App
 
 Start the FastAPI server:

@@ -1,0 +1,25 @@
+# Docker Compose cho Raspberry Pi 4 (ARM64).
+# Chay:  docker compose up -d --build
+# Xem log:  docker compose logs -f
+services:
+  face-attendance:
+    build: .
+    image: face-attendance:latest
+    container_name: face-attendance
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      APP_ENV: production
+      HOST: 0.0.0.0
+      PORT: "8000"
+      # Camera mac dinh index 0; doi neu webcam o /dev/video khac.
+      CAMERA_SOURCE: "0"
+    volumes:
+      # Giu model tai ve va DB qua cac lan restart (khong build lai/tai lai).
+      - ./models:/app/models
+      - ./database:/app/database
+      - ./logs:/app/logs
+    devices:
+      # Mapping USB webcam tren Pi vao container. Sua neu camera o video1...
+      - "/dev/video0:/dev/video0"

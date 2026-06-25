@@ -1,0 +1,31 @@
+# Khong copy moi truong / cache nang vao image
+.venv/
+.conda*/
+venv/
+env/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+pytest-cache-files-*/
+
+# Model va du lieu runtime: tai/ tao trong container, khong copy tu may build
+models/
+database/*.db
+database/*.db-shm
+database/*.db-wal
+database/backups/
+logs/
+
+# Secrets / git / IDE
+.env
+.env.*
+!.env.example
+.git/
+.gitignore
+.idea/
+.vscode/
+
+# Tai lieu / file khong can cho runtime
+docs/
+*.md
+!README.md
