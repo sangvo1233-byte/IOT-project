@@ -78,3 +78,7 @@ desktop.ini
 tmp/
 temp/
 
+
+# Kiro/agent assistant config (local only, not for public repo)
+AGENTS.md
+.kiro/
